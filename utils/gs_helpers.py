@@ -2,6 +2,7 @@ import os
 import open3d as o3d
 import torch
 import torch.nn.functional as F
+import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -470,6 +471,9 @@ def eval(dataset, final_params, num_frames, eval_dir, sil_thres, mapping_iters, 
     os.makedirs(plot_dir, exist_ok=True)
 
     gt_w2c_list = []
+    os.makedirs(os.path.join(plot_dir, 'rgb'), exist_ok=True)
+    os.makedirs(os.path.join(plot_dir, 'depth'), exist_ok=True)
+    print('Output path', plot_dir)
     for time_idx in tqdm(range(num_frames)):
         # Get RGB-D Data & Camera Parameters
         color, depth, intrinsics, pose = dataset[time_idx]
@@ -498,12 +502,15 @@ def eval(dataset, final_params, num_frames, eval_dir, sil_thres, mapping_iters, 
         # Render Depth & Silhouette
         depth_sil, _, _, = Renderer(raster_settings=curr_data['cam'])(**depth_sil_rendervar)
         rastered_depth = depth_sil[0, :, :].unsqueeze(0)
+        torchvision.utils.save_image(rastered_depth, os.path.join(plot_dir, 'depth', f"{time_idx:04d}.png"))
         valid_depth_mask = (curr_data['depth'] > 0)
         silhouette = depth_sil[1, :, :]
         presence_sil_mask = (silhouette > sil_thres)
         
         # Render RGB and Calculate PSNR
         im, radius, _, = Renderer(raster_settings=curr_data['cam'])(**rendervar)
+        torchvision.utils.save_image(im, os.path.join(plot_dir, 'rgb', f"{time_idx:04d}.png"))
+
         if mapping_iters==0 and not add_new_gaussians:
             weighted_im = im * presence_sil_mask
             weighted_gt_im = curr_data['im'] * presence_sil_mask

@@ -1,73 +1,96 @@
 import os
 from os.path import join as p_join
 
-scenes = ["room0", "room1", "room2",
-          "office0", "office1", "office2",
-          "office_", "office4"]
-
-primary_device="cuda:0"
+primary_device = "cuda:0"
 seed = 0
-scene_name = scenes[0]
+
+base_dir = "./experiments/iPhone_Captures" # Root Directory to Save iPhone Dataset
+
+scene_name = "240926124017" # Scan Name 4: 99 frames
+num_frames = 99 # boxes
+
+
+# scene_name = "240926122854" # Scan Name 3: 97 frames
+# num_frames = 97 # Desired number of frames to capture
+
+# scene_name = "240923153606" # Scan Name 1: case 20 frames
+# num_frames = 20 # Desired number of frames to capture
+# scene_name = "240925121113" # Scan Name 2: screen 23 frames
+# num_frames = 23 # Desired number of frames to capture
+
+depth_scale = 10.0 # Depth Scale used when saving depth
+overwrite = False # Rewrite over dataset if it exists
+
+full_res_width = 1920
+full_res_height = 1440
+downscale_factor = 2.0
+densify_downscale_factor = 4.0
 
 map_every = 1
-keyframe_every = 5
+if num_frames < 25:
+    keyframe_every = int(num_frames//5)
+else:
+    keyframe_every = 5
 mapping_window_size = 32
-tracking_iters = 10
-mapping_iters = 15
-
-group_name = "Replica"
-run_name = f"{scene_name}_{seed}"
+tracking_iters = 60
+mapping_iters = 60
 
 config = dict(
-    workdir=f"./experiments/{group_name}",
-    run_name=run_name,
+    workdir=f"./{base_dir}/{scene_name}",
+    
+    run_name="SplaTAM_iPhone",
+    overwrite=overwrite,
+    depth_scale=depth_scale,
+    num_frames=num_frames,
     seed=seed,
     primary_device=primary_device,
     map_every=map_every, # Mapping every nth frame
     keyframe_every=keyframe_every, # Keyframe every nth frame
     mapping_window_size=mapping_window_size, # Mapping window size
-    report_global_progress_every=500, # Report Global Progress every nth frame
-    eval_every=5, # Evaluate every nth frame (at end of SLAM)
+    report_global_progress_every=100, # Report Global Progress every nth frame
+    eval_every=1, # Evaluate every nth frame (at end of SLAM)
     scene_radius_depth_ratio=3, # Max First Frame Depth to Scene Radius Ratio (For Pruning/Densification)
     mean_sq_dist_method="projective", # ["projective", "knn"] (Type of Mean Squared Distance Calculation for Scale of Gaussians)
     gaussian_distribution="isotropic", # ["isotropic", "anisotropic"] (Isotropic -> Spherical Covariance, Anisotropic -> Ellipsoidal Covariance)
     report_iter_progress=False,
     load_checkpoint=False,
-    checkpoint_time_idx=0,
+    checkpoint_time_idx=130,
     save_checkpoints=False, # Save Checkpoints
-    checkpoint_interval=100, # Checkpoint Interval
+    checkpoint_interval=5, # Checkpoint Interval
     use_wandb=False,
     wandb=dict(
-        entity="theairlab",
-        project="SplaTAM",
-        group=group_name,
-        name=run_name,
-        save_qual=False,
-        eval_save_qual=True,
+        project="SplaTAM_iPhone",
+        entity="hanhj-loquat",
+        group = scene_name,
+        name = "97_frames",
     ),
     data=dict(
-        basedir="./data/Replica",
-        gradslam_data_cfg="./configs/data/replica.yaml",
+        dataset_name="nerfcapture",
+        basedir=base_dir,
         sequence=scene_name,
-        desired_image_height=680,
-        desired_image_width=1200,
-        tracking_image_height=680,
-        tracking_image_width=1200,
-        densification_image_height=340,
-        densification_image_width=600,
+        desired_image_height=int(full_res_height//downscale_factor),
+        desired_image_width=int(full_res_width//downscale_factor),
+        densification_image_height=int(full_res_height//densify_downscale_factor),
+        densification_image_width=int(full_res_width//densify_downscale_factor),
         start=0,
         end=-1,
         stride=1,
-        num_frames=-1,
+        num_frames=num_frames,
     ),
     tracking=dict(
         use_gt_poses=False, # Use GT Poses for Tracking
         forward_prop=True, # Forward Propagate Poses
+        visualize_tracking_loss=False, # Visualize Tracking Diff Images
         num_iters=tracking_iters,
         use_sil_for_loss=True,
         sil_thres=0.99,
         use_l1=True,
+        use_depth_loss_thres=True,
+        depth_loss_thres=20000, # Num of Tracking Iters becomes twice if this value is not met
         ignore_outlier_depth_loss=False,
+        use_uncertainty_for_loss_mask=False,
+        use_uncertainty_for_loss=False,
+        use_chamfer=False,
         loss_weights=dict(
             im=0.5,
             depth=1.0,
@@ -78,8 +101,8 @@ config = dict(
             unnorm_rotations=0.0,
             logit_opacities=0.0,
             log_scales=0.0,
-            cam_unnorm_rots=0.0004,
-            cam_trans=0.002,
+            cam_unnorm_rots=0.001,
+            cam_trans=0.004,
         ),
     ),
     mapping=dict(
@@ -87,8 +110,11 @@ config = dict(
         add_new_gaussians=True,
         sil_thres=0.5, # For Addition of new Gaussians
         use_l1=True,
-        use_sil_for_loss=False,
         ignore_outlier_depth_loss=False,
+        use_sil_for_loss=False,
+        use_uncertainty_for_loss_mask=False,
+        use_uncertainty_for_loss=False,
+        use_chamfer=False,
         loss_weights=dict(
             im=0.5,
             depth=1.0,
@@ -135,6 +161,6 @@ config = dict(
         viz_near=0.01, viz_far=100.0,
         view_scale=2,
         viz_fps=5, # FPS for Online Recon Viz
-        enter_interactive_post_online=True, # Enter Interactive Mode after Online Recon Viz
+        enter_interactive_post_online=False, # Enter Interactive Mode after Online Recon Viz
     ),
 )

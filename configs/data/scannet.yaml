@@ -1,4 +1,4 @@
-dataset_name: 'scannet'
+dataset_name: 'scannet'  # direct to the parent class
 camera_params:
   image_height: 968
   image_width: 1296

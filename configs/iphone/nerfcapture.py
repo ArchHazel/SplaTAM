@@ -5,7 +5,7 @@ primary_device = "cuda:0"
 seed = 0
 
 base_dir = "./experiments/iPhone_Captures" # Root Directory to Save iPhone Dataset
-scene_name = "offline_demo" # Scan Name
+scene_name = "offline_demo" # Scan Name: yuwendi office
 num_frames = 10 # Desired number of frames to capture
 depth_scale = 10.0 # Depth Scale used when saving depth
 overwrite = False # Rewrite over dataset if it exists

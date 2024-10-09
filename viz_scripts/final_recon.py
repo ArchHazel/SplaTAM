@@ -226,6 +226,8 @@ def visualize(scene_path, cfg):
     view_k = k * cfg['view_scale']
     view_k[2, 2] = 1
     view_control = vis.get_view_control()
+    print("vis is",vis)
+    print("view_control is",view_control)
     cparams = o3d.camera.PinholeCameraParameters()
     if cfg['offset_first_viz_cam']:
         view_w2c = w2c

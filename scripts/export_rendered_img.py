@@ -46,7 +46,7 @@ def save_ply(path, means, scales, rotations, rgbs, opacities, normals=None):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, help="Path to config file.",default="./configs/iphone/nerfcapture_off.py")
+    parser.add_argument("config", type=str, help="Path to config file.")
     return parser.parse_args()
 
 

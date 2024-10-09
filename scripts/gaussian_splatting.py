@@ -569,6 +569,7 @@ def offline_splatting(config: dict):
                  wandb_run=wandb_run, wandb_save_qual=config['wandb']['eval_save_qual'],
                  mapping_iters=config["train"]["num_iters_mapping"], add_new_gaussians=True)
         else:
+            print('here')
             eval(eval_dataset, eval_params, eval_num_frames, eval_dir, sil_thres=config['train']['sil_thres'],
                  mapping_iters=config["train"]["num_iters_mapping"], add_new_gaussians=True)
 

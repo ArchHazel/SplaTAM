@@ -6,8 +6,8 @@ primary_device = "cuda:0"
 scenes = ["scene0000_00", "scene0059_00", "scene0106_00", 
           "scene0169_00", "scene0181_00", "scene0207_00"]
 
-seed = int(6)
-scene_name = scenes[int(6)]
+seed = int(0)
+scene_name = scenes[seed]
 
 map_every = 1
 keyframe_every = 5
@@ -37,7 +37,7 @@ config = dict(
     checkpoint_time_idx=0,
     save_checkpoints=False, # Save Checkpoints
     checkpoint_interval=100, # Checkpoint Interval
-    use_wandb=True,
+    use_wandb=False,
     wandb=dict(
         entity="theairlab",
         project="SplaTAM",
@@ -48,7 +48,7 @@ config = dict(
     ),
     data=dict(
         basedir="./data/scannet",
-        gradslam_data_cfg="./configs/data/scannet.yaml",
+        gradslam_data_cfg="./configs/data/scannet.yaml", # GradSLAM Data Config File; place the camera intrinsics in the yaml file
         sequence=scene_name,
         desired_image_height=480,
         desired_image_width=640,

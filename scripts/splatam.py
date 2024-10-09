@@ -490,7 +490,12 @@ def rgbd_slam(config: dict):
         gradslam_data_cfg = {}
         gradslam_data_cfg["dataset_name"] = dataset_config["dataset_name"]
     else:
+        # for most cases, gradslam_data_cfg is provided
+        # then the config is loaded from the yaml file
+        # how to load is written in "dataconfig.py"
         gradslam_data_cfg = load_dataset_config(dataset_config["gradslam_data_cfg"])
+
+
     if "ignore_bad" not in dataset_config:
         dataset_config["ignore_bad"] = False
     if "use_train_split" not in dataset_config:
@@ -502,12 +507,14 @@ def rgbd_slam(config: dict):
     else:
         if dataset_config["densification_image_height"] != dataset_config["desired_image_height"] or \
             dataset_config["densification_image_width"] != dataset_config["desired_image_width"]:
+            # it is the case as in spltam_s.py: densification is not equal to desired
             seperate_densification_res = True
         else:
             seperate_densification_res = False
     if "tracking_image_height" not in dataset_config:
         dataset_config["tracking_image_height"] = dataset_config["desired_image_height"]
         dataset_config["tracking_image_width"] = dataset_config["desired_image_width"]
+        # in most case, it is not defined
         seperate_tracking_res = False
     else:
         if dataset_config["tracking_image_height"] != dataset_config["desired_image_height"] or \
@@ -516,6 +523,7 @@ def rgbd_slam(config: dict):
         else:
             seperate_tracking_res = False
     # Poses are relative to the first frame
+
     dataset = get_dataset(
         config_dict=gradslam_data_cfg,
         basedir=dataset_config["basedir"],
@@ -992,8 +1000,7 @@ def rgbd_slam(config: dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("experiment", type=str, help="Path to experiment file")
-
+    parser.add_argument("--experiment", type=str, help="Path to experiment file",default="configs/iphone/nerfcapture_off.py")
     args = parser.parse_args()
 
     experiment = SourceFileLoader(

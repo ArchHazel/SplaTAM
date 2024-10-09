@@ -5,7 +5,9 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+import trimesh
 
+from scripts.depth_to_xyz import depth_to_points_fast
 from datasets.gradslam_datasets.geometryutils import relative_transformation
 from utils.recon_helpers import setup_camera
 from utils.slam_external import build_rotation, calc_psnr
@@ -404,16 +406,38 @@ def eval_online(dataset, all_params, num_frames, eval_online_dir, sil_thres,
         wandb_run.log({"Online Eval/Metrics": fig})
     plt.close()
 
+def mask_2d_selection(depth,eval_dir,i,time_idx):
+    # back two folders
+    read_mask_path  = eval_dir.split('/')[:-2]
+    read_mask_path = '/'.join(read_mask_path)
+    read_mask_path = os.path.join(read_mask_path, 'mask_data')
+
+    mask_img_path = os.listdir(read_mask_path)
+    mask_img_path = sorted(mask_img_path)
+    mask_path = mask_img_path[time_idx]
+
+
+    mask_img_path_tmp = os.path.join(read_mask_path, mask_path)
+    print("mask_path",mask_img_path_tmp)
+    mask = np.load(mask_img_path_tmp) # 720 * 960
+    mask_id = (mask == i)
+    depth_mask = depth.cpu() * mask_id
+    return depth_mask
+            
+            
+
 
 def eval(dataset, final_params, num_frames, eval_dir, sil_thres, 
-         mapping_iters, add_new_gaussians, wandb_run=None, wandb_save_qual=False, eval_every=1, save_frames=False):
-    print("Evaluating Final Parameters ...")
+         mapping_iters, add_new_gaussians, wandb_run=None, wandb_save_qual=False, eval_every=1, save_frames=True,save_ply=True):
+    print("Evaluating Final Parameters ... in eval_helpers.py")
+    print("save_frame flag", save_frames)
     psnr_list = []
     rmse_list = []
     l1_list = []
     lpips_list = []
     ssim_list = []
     plot_dir = os.path.join(eval_dir, "plots")
+    print("plot_dir", plot_dir)
     os.makedirs(plot_dir, exist_ok=True)
     if save_frames:
         render_rgb_dir = os.path.join(eval_dir, "rendered_rgb")
@@ -424,6 +448,8 @@ def eval(dataset, final_params, num_frames, eval_dir, sil_thres,
         os.makedirs(rgb_dir, exist_ok=True)
         depth_dir = os.path.join(eval_dir, "depth")
         os.makedirs(depth_dir, exist_ok=True)
+        pcd_dir = os.path.join(eval_dir, "pcd")
+        os.makedirs(pcd_dir, exist_ok=True)
 
     gt_w2c_list = []
     for time_idx in tqdm(range(num_frames)):
@@ -468,10 +494,42 @@ def eval(dataset, final_params, num_frames, eval_dir, sil_thres,
         rastered_depth_viz = rastered_depth.detach()
         rastered_depth = rastered_depth * valid_depth_mask
         silhouette = depth_sil[1, :, :]
-        presence_sil_mask = (silhouette > sil_thres)
-        
+        presence_sil_mask = (silhouette > sil_thres)   
+
         # Render RGB and Calculate PSNR
+
+
         im, radius, _, = Renderer(raster_settings=curr_data['cam'])(**rendervar)
+        
+        if save_ply:
+            category_max = 20
+        else:
+            category_max = 0
+
+
+        for i in range(category_max):
+            if i == 0:
+                continue
+            rastered_depth_masked = mask_2d_selection(rastered_depth,eval_dir,i,time_idx).cuda()
+            points, rays_d = depth_to_points_fast(rastered_depth_masked, intrinsics.inverse().T)
+            pts_xyz = points.view(-1, 3)
+            pts_color = im.permute(1, 2, 0).reshape(-1, 3)
+            pts_xyz_view = torch.concat([pts_xyz, torch.ones_like(pts_xyz[:, 0:1])], dim=-1)
+            pts_xyz_world = pts_xyz_view @ pose.T
+            pts_xyz_world = pts_xyz_world[:, :3]
+
+            pts_mask = rastered_depth_masked.view(-1) > 0
+            if pts_mask.sum() == 0:
+                continue
+            os.makedirs(os.path.join(pcd_dir,str(i)), exist_ok=True)
+            # create trimesh pcd
+            pcd = trimesh.PointCloud(
+                pts_xyz_world[pts_mask].detach().cpu().numpy(), 
+                pts_color[pts_mask].detach().cpu().numpy()
+            )
+            pcd.export(os.path.join(pcd_dir,str(i), f"pcd_{time_idx}.ply"))
+
+        
         if mapping_iters==0 and not add_new_gaussians:
             weighted_im = im * presence_sil_mask * valid_depth_mask
             weighted_gt_im = curr_data['im'] * presence_sil_mask * valid_depth_mask

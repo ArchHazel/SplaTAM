@@ -42,8 +42,8 @@ class ScannetDataset(GradSLAMDataset):
         )
 
     def get_filepaths(self):
-        color_paths = natsorted(glob.glob(f"{self.input_folder}/color/*.jpg"))
-        depth_paths = natsorted(glob.glob(f"{self.input_folder}/depth/*.png"))
+        color_paths = natsorted(glob.glob(f"{self.input_folder}/frames/color/*.jpg"))
+        depth_paths = natsorted(glob.glob(f"{self.input_folder}/frames/depth/*.png"))
         embedding_paths = None
         if self.load_embeddings:
             embedding_paths = natsorted(glob.glob(f"{self.input_folder}/{self.embedding_dir}/*.pt"))
@@ -51,7 +51,7 @@ class ScannetDataset(GradSLAMDataset):
 
     def load_poses(self):
         poses = []
-        posefiles = natsorted(glob.glob(f"{self.input_folder}/pose/*.txt"))
+        posefiles = natsorted(glob.glob(f"{self.input_folder}/frames/pose/*.txt"))
         for posefile in posefiles:
             _pose = torch.from_numpy(np.loadtxt(posefile))
             poses.append(_pose)
